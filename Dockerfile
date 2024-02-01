@@ -1,4 +1,4 @@
-FROM fightingsj/maven:3.8-openjdk-17 AS builder
+FROM maven:3.8-openjdk-17 AS builder
 WORKDIR /app
 COPY pom.xml /app
 COPY ./settings.xml /usr/share/maven/conf/settings.xml

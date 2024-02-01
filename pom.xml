@@ -4,7 +4,7 @@
 
     <groupId>org.keycloak</groupId>
     <artifactId>keycloak-dingtalk-social-identity-provider</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>23.0.4</version>
     <packaging>jar</packaging>
 
     <name>keycloak-dingtalk-social-identity-provider</name>

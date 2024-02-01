@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: fightingsj/keycloak:23.0.4-dingtalk
+          image: registry.cn-hangzhou.aliyuncs.com/yangsijie666/yangsijie:keycloak-dingtalk-23.0.4
           imagePullPolicy: Always
           env:
             - name: KEYCLOAK_ADMIN
