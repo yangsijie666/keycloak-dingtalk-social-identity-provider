@@ -2,10 +2,12 @@ package org.keycloak.social;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriBuilder;
 import org.keycloak.broker.oidc.AbstractOAuth2IdentityProvider;
 import org.keycloak.broker.oidc.OAuth2IdentityProviderConfig;
 import org.keycloak.broker.oidc.OIDCIdentityProvider;
 import org.keycloak.broker.oidc.mappers.AbstractJsonUserAttributeMapper;
+import org.keycloak.broker.provider.AuthenticationRequest;
 import org.keycloak.broker.provider.BrokeredIdentityContext;
 import org.keycloak.broker.provider.IdentityBrokerException;
 import org.keycloak.broker.provider.util.SimpleHttp;
@@ -43,6 +45,12 @@ public class DingTalkIdentityProvider extends AbstractOAuth2IdentityProvider imp
     @Override
     protected String getProfileEndpointForValidation(EventBuilder event) {
         return USER_INFO;
+    }
+
+    @Override
+    protected UriBuilder createAuthorizationUrl(AuthenticationRequest request) {
+        UriBuilder uriBuilder = super.createAuthorizationUrl(request);
+        return uriBuilder.queryParam("prompt", "consent");
     }
 
     @Override
