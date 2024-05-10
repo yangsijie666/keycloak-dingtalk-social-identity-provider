@@ -1,6 +1,16 @@
 # keycloak-dingtalk-social-identity-provider
 
-Keycloak Social Login 插件 —— 钉钉登陆。
+Keycloak Social Login 插件（IDP） —— 钉钉登陆。
+
+> Keycloak HA 部署至 Kubernetes 集群，可参考如下文档：
+> 
+> [🔗 GitBook](https://yangsijie151104.gitbook.io/keycloak-on-k8s-ha-bu-shu/)
+> 
+> [🔗 CSDN](http://t.csdnimg.cn/f2PZr)
+> 
+> [🔗 掘金](https://juejin.cn/post/7366836510690672675)
+> 
+> [🔗 Notion](https://believed-stallion-f40.notion.site/Keycloak-on-K8S-HA-e19576ca2cd448338debf66a16e9b6a6?pvs=4)
 
 ## 🌟 效果
 
