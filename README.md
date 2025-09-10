@@ -3,27 +3,27 @@
 Keycloak Social Login 插件（IDP） —— 钉钉登陆。
 
 > Keycloak HA 部署至 Kubernetes 集群，可参考如下文档：
-> 
+>
 > [🔗 GitBook](https://yangsijie151104.gitbook.io/keycloak-on-k8s-ha-bu-shu/)
-> 
+>
 > [🔗 CSDN](http://t.csdnimg.cn/f2PZr)
-> 
+>
 > [🔗 掘金](https://juejin.cn/post/7366836510690672675)
-> 
+>
 > [🔗 Notion](https://believed-stallion-f40.notion.site/Keycloak-on-K8S-HA-e19576ca2cd448338debf66a16e9b6a6?pvs=4)
 
 ## 🌟 效果
 
 ![image-20240201173946720](./assets/image-20240201173946720.png)
 
-##  ⚙️ 安装
+## ⚙️ 安装
 
-| Keycloak 版本     | 是否支持 |
-|-----------------|------|
-| 23.0.4 ~ 24.0.3 | ✅    |
-| 其他              | ❌    |
+| Keycloak 版本   | 是否支持 |
+| --------------- | -------- |
+| 23.0.4 ~ 24.0.3 | ✅       |
+| 其他            | ❌       |
 
-###  🤖 源码构建
+### 🤖 源码构建
 
 在代码根目录构建 jar 包：
 
@@ -50,18 +50,18 @@ mvn clean install
 ```shell
 # 以下方式选其一
 # 直接使用 docker
-docker build -t keycloak-dingtalk:23.0.4 .
+docker build -t keycloak-dingtalk:23.0.7 .
 
 # 使用 buildkit
-docker buildx build -f ./Dockerfile --push --platform linux/arm64/v8,linux/amd64 --tag keycloak-dingtalk:23.0.4 .
+docker buildx build -f ./Dockerfile --push --platform linux/arm64/v8,linux/amd64 --tag keycloak-dingtalk:23.0.7 .
 ```
 
 ##### 方式二 - 使用已构建镜像
 
-已事先将容器镜像推送至阿里云，直接拉取使用即可：
+已事先将容器镜像推送至 ~~阿里云~~ Docker Hub，直接拉取使用即可：
 
 ```shell
-docker pull registry.cn-hangzhou.aliyuncs.com/yangsijie666/yangsijie:keycloak-dingtalk-23.0.4
+docker pull yangsijie666/keycloak:dingtalk-23.0.7
 ```
 
 #### 🏵️ 运行容器
@@ -82,7 +82,7 @@ docker run --name keycloak -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=ad
 kubectl apply -f k8s.yaml
 ```
 
-##  🛠️ 配置
+## 🛠️ 配置
 
 ### 🥙 钉钉
 
@@ -102,9 +102,8 @@ kubectl apply -f k8s.yaml
 
 ![image-20240201171121759](./assets/image-20240201171121759.png)
 
-在配置页填入从钉钉侧获取的`ClientId` 和 `ClientSecret`。
+在配置页填入从钉钉侧获取的 `ClientId` 和 `ClientSecret`。
 
 > 这里的 **Redirect URI** 即用来复制粘贴进钉钉侧的 **重定向 URL**。
 
 ![image-20240201171427755](./assets/image-20240201171427755.png)
-
