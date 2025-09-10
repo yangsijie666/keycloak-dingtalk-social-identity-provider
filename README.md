@@ -122,3 +122,16 @@ kubectl apply -f k8s.yaml
 
 > 若用户在 Keycloak 中未注册，登陆后会跳转至注册页。
 > ![1757496063750](./assets/1757496063750.png)
+
+## ⭐ Star History
+
+如果这个项目对你有帮助，请给我们一个 ⭐！
+
+[![Star History Chart](https://api.star-history.com/svg?repos=yangsijie666/keycloak-dingtalk-social-identity-provider&type=Date)](https://star-history.com/#yangsijie666/keycloak-dingtalk-social-identity-provider&Date)
+
+---
+
+<div align="center">
+  <p>Made with ❤️ by the yangsijie666</p>
+  <p>如果你喜欢这个项目，请考虑给一个 ⭐</p>
+</div>
