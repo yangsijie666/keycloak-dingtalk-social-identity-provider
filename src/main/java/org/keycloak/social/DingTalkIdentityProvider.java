@@ -59,12 +59,23 @@ public class DingTalkIdentityProvider extends AbstractOAuth2IdentityProvider imp
 
         BrokeredIdentityContext user = new BrokeredIdentityContext((getJsonProperty(profile, "unionId")));
 
+        String nick = getJsonProperty(profile, "nick");
         String email = getJsonProperty(profile, "email");
-        user.setUsername(email.split("@")[0]);
-        user.setEmail(email);
+        String unionId = getJsonProperty(profile, "unionId");
+
+        if (nick != null && !nick.isEmpty()) {
+            user.setUsername(nick);
+            user.setUserAttribute("nick", getJsonProperty(profile, "nick"));
+        } else if (email != null && !email.isEmpty()) {
+            user.setUsername(email.split("@")[0]);
+            user.setEmail(email);
+            user.setUserAttribute("email", email);
+        } else {
+            user.setUsername(unionId);
+        }
+
         user.setUserAttribute("mobile", getJsonProperty(profile, "mobile"));
         user.setUserAttribute("avatarUrl", getJsonProperty(profile, "avatarUrl"));
-        user.setUserAttribute("nick", getJsonProperty(profile, "nick"));
         user.setUserAttribute("stateCode", getJsonProperty(profile, "stateCode"));
         user.setUserAttribute("unionId", getJsonProperty(profile, "unionId"));
         user.setUserAttribute("openId", getJsonProperty(profile, "openId"));
