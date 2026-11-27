@@ -1,29 +1,34 @@
 package org.keycloak.social;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
+import org.keycloak.OAuth2Constants;
 import org.keycloak.broker.oidc.AbstractOAuth2IdentityProvider;
 import org.keycloak.broker.oidc.OAuth2IdentityProviderConfig;
-import org.keycloak.broker.oidc.OIDCIdentityProvider;
 import org.keycloak.broker.oidc.mappers.AbstractJsonUserAttributeMapper;
 import org.keycloak.broker.provider.AuthenticationRequest;
 import org.keycloak.broker.provider.BrokeredIdentityContext;
 import org.keycloak.broker.provider.IdentityBrokerException;
-import org.keycloak.broker.provider.util.SimpleHttp;
 import org.keycloak.broker.social.SocialIdentityProvider;
 import org.keycloak.events.EventBuilder;
-import org.keycloak.models.KeycloakContext;
+import org.keycloak.http.simple.SimpleHttp;
+import org.keycloak.http.simple.SimpleHttpRequest;
+import org.keycloak.http.simple.SimpleHttpResponse;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
-import org.keycloak.services.Urls;
 import org.keycloak.social.models.TokenRequestBody;
 import org.keycloak.vault.VaultStringSecret;
+
+import java.io.IOException;
 
 /**
  * @author yangsijie666
  */
-public class DingTalkIdentityProvider extends AbstractOAuth2IdentityProvider implements SocialIdentityProvider {
+public class DingTalkIdentityProvider extends AbstractOAuth2IdentityProvider<OAuth2IdentityProviderConfig>
+        implements SocialIdentityProvider<OAuth2IdentityProviderConfig> {
     public static final String AUTH_URL = "https://login.dingtalk.com/oauth2/auth";
     public static final String TOKEN_URL = "https://api.dingtalk.com/v1.0/oauth2/userAccessToken";
     public static final String USER_INFO = "https://api.dingtalk.com/v1.0/contact/users/me";
@@ -55,13 +60,13 @@ public class DingTalkIdentityProvider extends AbstractOAuth2IdentityProvider imp
 
     @Override
     protected BrokeredIdentityContext extractIdentityFromProfile(EventBuilder event, JsonNode profile) {
-        logger.info("extractIdentityFromProfile=" + profile.toString());
-
-        BrokeredIdentityContext user = new BrokeredIdentityContext((getJsonProperty(profile, "unionId")));
-
+        String unionId = getJsonProperty(profile, "unionId");
+        if (unionId == null || unionId.isBlank()) {
+            throw new IdentityBrokerException("DingTalk profile did not contain a unionId");
+        }
+        BrokeredIdentityContext user = new BrokeredIdentityContext(unionId, getConfig());
         String nick = getJsonProperty(profile, "nick");
         String email = getJsonProperty(profile, "email");
-        String unionId = getJsonProperty(profile, "unionId");
 
         if (nick != null && !nick.isEmpty()) {
             user.setUsername(nick);
@@ -77,9 +82,8 @@ public class DingTalkIdentityProvider extends AbstractOAuth2IdentityProvider imp
         user.setUserAttribute("mobile", getJsonProperty(profile, "mobile"));
         user.setUserAttribute("avatarUrl", getJsonProperty(profile, "avatarUrl"));
         user.setUserAttribute("stateCode", getJsonProperty(profile, "stateCode"));
-        user.setUserAttribute("unionId", getJsonProperty(profile, "unionId"));
+        user.setUserAttribute("unionId", unionId);
         user.setUserAttribute("openId", getJsonProperty(profile, "openId"));
-        user.setIdpConfig(getConfig());
         user.setIdp(this);
 
         AbstractJsonUserAttributeMapper.storeUserProfileForMapper(user, profile, getConfig().getAlias());
@@ -87,34 +91,43 @@ public class DingTalkIdentityProvider extends AbstractOAuth2IdentityProvider imp
         return user;
     }
 
-    // extractTokenFromResponse
+    public static class DingTalkEndpoint extends Endpoint {
+        private final OAuth2IdentityProviderConfig providerConfig;
 
-    protected static class DingTalkEndpoint extends Endpoint {
-        private final AbstractOAuth2IdentityProvider provider;
-
-        public DingTalkEndpoint(AuthenticationCallback callback, RealmModel realm, EventBuilder event, AbstractOAuth2IdentityProvider provider) {
+        public DingTalkEndpoint(AuthenticationCallback callback, RealmModel realm, EventBuilder event,
+                                DingTalkIdentityProvider provider) {
             super(callback, realm, event, provider);
-            this.provider = provider;
+            providerConfig = provider.getConfig();
         }
 
         @Override
-        public SimpleHttp generateTokenRequest(String authorizationCode) {
-            OAuth2IdentityProviderConfig providerConfig = this.provider.getConfig();
-
-            String clientSecret = "";
-            try (VaultStringSecret vaultStringSecret = session.vault().getStringSecret(this.provider.getConfig().getClientSecret())) {
-                clientSecret = vaultStringSecret.get().orElse(this.provider.getConfig().getClientSecret());
+        @GET
+        public Response authResponse(@QueryParam(OAUTH2_PARAMETER_STATE) String state,
+                                     @QueryParam(OAUTH2_PARAMETER_CODE) String authorizationCode,
+                                     @QueryParam(OAuth2Constants.ERROR) String error,
+                                     @QueryParam(OAuth2Constants.ERROR_DESCRIPTION) String errorDescription) {
+            String authCode = session.getContext().getUri().getQueryParameters().getFirst("authCode");
+            if (authCode != null) {
+                authorizationCode = authCode;
             }
+            return super.authResponse(state, authorizationCode, error, errorDescription);
+        }
 
+        @Override
+        public SimpleHttpRequest generateTokenRequest(String authorizationCode) {
+            String configuredSecret = providerConfig.getClientSecret();
+            String clientSecret;
+            try (VaultStringSecret vaultStringSecret = session.vault().getStringSecret(configuredSecret)) {
+                clientSecret = vaultStringSecret.get().orElse(configuredSecret);
+            }
             TokenRequestBody requestBody = new TokenRequestBody(
-                    this.provider.getConfig().getClientId(),
+                    providerConfig.getClientId(),
                     clientSecret,
                     authorizationCode,
-                    "authorization_code"
+                    OAUTH2_GRANT_TYPE_AUTHORIZATION_CODE
             );
-
-            return SimpleHttp.doPost(providerConfig.getTokenUrl(), this.session)
-                    .header("Content-Type", "application/json")
+            return SimpleHttp.create(session).doPost(providerConfig.getTokenUrl())
+                    .acceptJson()
                     .json(requestBody);
         }
     }
@@ -131,20 +144,18 @@ public class DingTalkIdentityProvider extends AbstractOAuth2IdentityProvider imp
 
     @Override
     protected BrokeredIdentityContext doGetFederatedIdentity(String accessToken) {
-        try (SimpleHttp.Response response = SimpleHttp.doGet(USER_INFO, session)
+        try (SimpleHttpResponse response = SimpleHttp.create(session).doGet(USER_INFO)
                 .header("x-acs-dingtalk-access-token", accessToken)
-                .header("Content-Type", "application/json")
+                .acceptJson()
                 .asResponse()) {
 
-            if (Response.Status.fromStatusCode(response.getStatus()).getFamily() != Response.Status.Family.SUCCESSFUL) {
-                logger.warnf("Profile endpoint returned an error (%d): %s", response.getStatus(), response.asString());
+            int status = response.getStatus();
+            if (Response.Status.Family.familyOf(status) != Response.Status.Family.SUCCESSFUL) {
+                logger.warnf("DingTalk profile endpoint returned HTTP %d", status);
                 throw new IdentityBrokerException("Profile could not be retrieved from the dingtalk endpoint");
             }
-
-            JsonNode profile = response.asJson();
-            logger.tracef("profile retrieved from dingtalk: %s", profile);
-            return extractIdentityFromProfile(null, profile);
-        } catch (Exception e) {
+            return extractIdentityFromProfile(null, response.asJson());
+        } catch (IOException e) {
             throw new IdentityBrokerException("Profile could not be retrieved from the dingtalk endpoint", e);
         }
     }
