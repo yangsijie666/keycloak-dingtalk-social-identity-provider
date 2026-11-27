@@ -18,69 +18,34 @@ Keycloak Social Login 插件（IDP） —— 钉钉登陆。
 
 ## ⚙️ 安装
 
-| Keycloak 版本   | 是否支持    |
-| --------------- | ----------- |
-| 23.0.7 ~ 24.0.3 | ✅          |
-| 其他            | ⚠️ 未测试 |
+此版本面向 Keycloak `26.8.2`，构建和运行时应使用相同版本的 Keycloak。
 
 ### 🤖 源码构建
 
-在代码根目录构建 jar 包：
+在项目根目录使用 JDK 17 或更高版本及 Maven 构建 JAR。
 
 ```shell
-mvn clean install
+mvn -B -ntp clean package
 ```
 
-在 `target` 目录下可见 `keycloak-dingtalk-social-identity-provider-{version}.jar`。
-
-将其部署至 Keycloak 的 `$KEYCLOAK_HOME/providers` 目录中。
-
-> Keycloak 默认的 providers 目录为 `/opt/keycloak/providers/`
+产物为 `target/keycloak-dingtalk-social-identity-provider-26.8.2.jar`。
+如果使用解压版 Keycloak，将它复制到 `$KEYCLOAK_HOME/providers/`，再运行 `kc.sh build`（Windows 使用 `kc.bat build`）。
 
 ### 🎃 容器部署
 
-#### 🌈 获取容器镜像
-
-这里的镜像是集成了钉钉登陆 IDP 的 keycloak。
-
-##### 方式一 - 自构建
-
-在代码根目录执行：
+先构建 JAR，再在项目根目录运行下方命令。Dockerfile 会将 `target/` 中的 JAR 复制到官方镜像 `quay.io/keycloak/keycloak:26.8.2` 的 `/opt/keycloak/providers/`，再运行 `kc.sh build`。
 
 ```shell
-# 以下方式选其一
-# 直接使用 docker
-docker build -t keycloak-dingtalk:23.0.7 .
-
-# 使用 buildkit
-docker buildx build -f ./Dockerfile --push --platform linux/arm64/v8,linux/amd64 --tag keycloak-dingtalk:23.0.7 .
+docker build -t keycloak-dingtalk:26.8.2 .
 ```
 
-##### 方式二 - 使用已构建镜像
-
-已事先将容器镜像推送至 ~~阿里云~~ Docker Hub，直接拉取使用即可：
+本地联调默认使用 `dev-file` 数据库。构建生产 PostgreSQL 镜像时，指定数据库并使用独立标签。
 
 ```shell
-docker pull yangsijie666/keycloak:dingtalk-23.0.7
+docker build --build-arg KEYCLOAK_DB=postgres -t keycloak-dingtalk:26.8.2-postgres .
 ```
 
-#### 🏵️ 运行容器
-
-执行以下命令：
-
-```shell
-docker run --name keycloak -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin -p 8080:8080 镜像名 start-dev
-```
-
-访问 `http://localhost:8080` 即可登陆 Keycloak。
-
-### 🍾 Kubernetes 部署
-
-在代码根目录，执行以下命令：
-
-```shell
-kubectl apply -f k8s.yaml
-```
+生产容器使用 `start --optimized` 启动，并按部署环境配置数据库连接和 HTTPS 入口。仓库中的 `k8s.yaml` 是旧版镜像的示例，升级时需更新镜像及运行参数。
 
 ## 🛠️ 配置
 
@@ -107,6 +72,8 @@ kubectl apply -f k8s.yaml
 > 这里的 **Redirect URI** 即用来复制粘贴进钉钉侧的 **重定向 URL**。
 
 ![image-20240201171427755](./assets/image-20240201171427755.png)
+
+在钉钉应用的权限管理中开通 `Contact.User.Read`，并将 Keycloak 中该身份提供者的 **Default Scopes** 设置为 `openid Contact.User.Read`，以便读取登录用户的个人信息。
 
 ## 💪 使用
 

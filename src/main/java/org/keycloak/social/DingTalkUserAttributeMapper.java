@@ -1,7 +1,6 @@
 package org.keycloak.social;
 
 import org.keycloak.broker.oidc.mappers.AbstractJsonUserAttributeMapper;
-import org.keycloak.social.github.GitHubIdentityProviderFactory;
 
 /**
  * @author yangsijie666

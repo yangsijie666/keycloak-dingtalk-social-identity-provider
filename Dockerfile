@@ -1,21 +1,8 @@
-FROM maven:3.8-openjdk-17 AS builder
-WORKDIR /app
-COPY pom.xml /app
-COPY ./settings.xml /usr/share/maven/conf/settings.xml
-RUN mvn verify --fail-never -s /usr/share/maven/conf/settings.xml
-COPY . /app
-RUN mvn clean install -s /usr/share/maven/conf/settings.xml
-
-FROM quay.io/keycloak/keycloak:23.0.7 as kcbuilder
-
-# Enable health and metrics support
+FROM quay.io/keycloak/keycloak:26.8.2
+ARG KEYCLOAK_DB=dev-file
 ENV KC_HEALTH_ENABLED=true
 ENV KC_METRICS_ENABLED=true
-
 WORKDIR /opt/keycloak
-COPY --from=builder --chown=keycloak:keycloak /app/target/*.jar /opt/keycloak/providers/
-RUN /opt/keycloak/bin/kc.sh build
-
-FROM quay.io/keycloak/keycloak:23.0.7
-COPY --from=kcbuilder /opt/keycloak/ /opt/keycloak/
-ENTRYPOINT [ "/opt/keycloak/bin/kc.sh" ]
+COPY --chown=keycloak:keycloak target/keycloak-dingtalk-social-identity-provider-26.8.2.jar /opt/keycloak/providers/
+RUN touch -m --date=@1743465600 /opt/keycloak/providers/keycloak-dingtalk-social-identity-provider-26.8.2.jar \
+    && /opt/keycloak/bin/kc.sh build --db="${KEYCLOAK_DB}"
